@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GRAND LINE: PIRATE'S DESIRE ULTIMATE</title>
+    <style>
+        @font-face { font-family: 'Saiyan'; src: url('https://fonts.cdnfonts.com/s/14925/Saiyan-Sans.woff') format('woff'); }
+        :root { --db-orange: #ff4500; --db-blue: #0000ff; --border: #fff; --panel: #050505; }
+        
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; color: #f0f0f0; font-family: 'Arial', sans-serif; overflow: hidden; }
+
+        #bg-portrait { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: 1.5s; z-index: -1; pointer-events: none; }
+
+        #stat-bar { background: rgba(0,0,0,0.95); border-bottom: 2px solid var(--db-orange); padding: 12px; display: flex; justify-content: space-around; font-size: 0.75rem; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        .stat-val { color: var(--db-orange); text-shadow: 0 0 8px var(--db-orange); font-size: 0.9rem; }
+
+        #chat-window { height: calc(100vh - 360px); overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .msg { max-width: 85%; padding: 12px 15px; border-radius: 12px; font-size: 0.85rem; line-height: 1.5; border: 1px solid #222; animation: fadeIn 0.3s ease; }
+        .bot { align-self: flex-start; background: #111; border-left: 4px solid var(--db-orange); box-shadow: 2px 2px 10px rgba(255, 69, 0, 0.1); }
+        .user { align-self: flex-end; background: var(--db-blue); border-right: 4px solid #fff; color: white; }
+
+        .panel { position: fixed; bottom: 0; width: 100%; background: var(--panel); border-top: 3px solid var(--db-orange); padding: 12px; height: 300px; box-sizing: border-box; overflow-y: auto; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        
+        .btn { background: #1a1a1a; color: #fff; border: 1px solid #444; padding: 14px 4px; cursor: pointer; font-size: 0.65rem; text-transform: uppercase; transition: 0.2s; font-weight: bold; border-radius: 4px; }
+        .btn:active { background: var(--db-orange); color: #000; transform: scale(0.95); }
+        .btn-gold { border-color: gold; color: gold; box-shadow: 0 0 5px rgba(255,215,0,0.3); }
+        .btn-red { border-color: #ff3333; color: #ff3333; box-shadow: 0 0 5px rgba(255,0,0,0.3); }
+
+        #selector { position: fixed; inset: 0; background: radial-gradient(circle, #220000 0%, #000000 100%); z-index: 5000; padding: 20px; text-align: center; overflow-y: auto; }
+        .char-card { border: 2px solid #333; margin: 8px; padding: 10px; background: rgba(0,0,0,0.7); cursor: pointer; display: inline-block; width: 130px; transition: 0.3s; }
+        .char-card:hover { border-color: var(--db-orange); transform: translateY(-5px); box-shadow: 0 5px 15px rgba(255, 69, 0, 0.4); }
+        .char-card img { width: 100%; height: 160px; object-fit: cover; border-bottom: 2px solid #444; }
+
+        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 6000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+
+        #hidden-action { display: none; grid-column: span 3; background: #8e44ad; color: #fff; border: 2px solid #d8a8ff; font-size: 0.8rem; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(142, 68, 173, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(142, 68, 173, 0); } 100% { box-shadow: 0 0 0 0 rgba(142, 68, 173, 0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<img id="bg-portrait" src="">
+
+<div id="selector">
+    <h1 style="color:var(--db-orange); font-family:'Saiyan'; font-size:3rem; text-shadow: 3px 3px #ff0000; margin-bottom: 30px;">GRAND LINE DESIRES</h1>
+    <div id="char-list"></div>
+</div>
+
+<div id="stat-bar">
+    <div>BELI: <span id="money-val" class="stat-val">100</span></div>
+    <div>AŞK: <span id="love-val" class="stat-val">0</span>%</div>
+    <div>HAZ: <span id="lust-val" class="stat-val">0</span>%</div>
+    <div>STATÜ: <span id="status-val" class="stat-val">YABANCI</span></div>
+</div>
+
+<div id="chat-window"></div>
+
+<div class="panel">
+    <div class="grid" id="main-controls">
+        <button class="btn" onclick="openMenu('Korsanlık Görevi')">💰 KORSANLIK</button>
+        <button class="btn" onclick="openMenu('Eylem')">💬 EYLEM</button>
+        <button class="btn" onclick="openMenu('Hediye')">🎁 HEDİYE</button>
+        <button class="btn btn-red" id="extra-btn" onclick="openMenu('Extra')">🔥 EXTRA ACT</button>
+        <button class="btn btn-gold" onclick="usePill()">💊 EVET HAPI</button>
+        <button class="btn" id="photo-btn" onclick="reqPhoto()" style="display:none; color:cyan; border-color:cyan;">📸 FOTO İSTE</button>
+        <button class="btn btn-red" id="marry-btn" onclick="marry()" style="grid-column: span 3; display:none; font-size: 0.9rem;">❤️ SEVGİLİ OL (MÜHÜRLE)</button>
+        <button class="btn" id="hidden-action" onclick="specialAction()">⚡ KORSANLAR KRALI'NIN ARZUSU (İTAAT ET)</button>
+    </div>
+</div>
+
+<div id="modal">
+    <h2 id="modal-title" style="color:var(--db-orange); font-family:'Saiyan'; font-size: 2rem; letter-spacing: 2px;">BÖLÜM</h2>
+    <div class="grid" id="modal-content" style="width:100%; max-width:450px;"></div>
+    <button class="btn btn-red" style="margin-top:30px; width:150px; font-size: 0.8rem;" onclick="closeModal()">GERİ DÖN</button>
+</div>
+
+<script>
+const CHARS = [
+    { n: "Nami", color: "#ccccff", img: "assets/nami.png" }, { n: "Nico Robin", color: "#44aa88", img: "assets/robin.png" },
+    { n: "Boa Hancock", color: "#ffcccc", img: "assets/hancock.png" }, { n: "Charlotte Pudding", color: "#ff88ff", img: "assets/pudding.png" },
+    { n: "Rebecca", color: "#aa6644", img: "assets/rebecca.png" }, { n: "Jewelry Bonney", color: "#4444ff", img: "assets/bonney.png" },
+    { n: "Kouzuki Hiyori", color: "#ffffff", img: "assets/hiyori.png" }, { n: "Tashigi", color: "#ffee88", img: "assets/tashigi.png" }
+];
+
+// DEV DİYALOG KÜTÜPHANESİ (One Piece Temasıyla 100 Farklı Cevap)
+const DIALOGUES = {
+    ACT: {
+        "Konuş": [
+            "Sesin... bana Grand Line'daki fırtınayı bile unutturuyor.", "Bana rüyalarını, korsanlık yolunu anlat. Seni dinlemeyi seviyorum.", 
+            "Sen konuşurken... irademin sakinleştiğini hissediyorum.", "Lütfen... ismimi bir kez daha fısılda, bu bana haz veriyor.", 
+            "Sözlerin... içimde garip bir ateş yakıyor, ah..."
+        ],
+        "Sarıl": [
+            "Sıcaklığın... Tenimde hissetmek, ruhumun seninle bütünleşmesi gibi.", "Beni daha sıkı tut, bir korsan olarak bırakma.", 
+            "Kalp atışını ve Haki akışını hissedebiliyorum.", "Biraz daha böyle kalalım, bu bana haz veriyor.", 
+            "Kollarında eridiğimi hissediyorum, ah..."
+        ],
+        "Antrenman": [
+            "Terlemek bana hep iyi hissettirmiştir! Seninle antrenman... harika.", "Ah, kaslarım yanıyor ama bu harika bir haz! Daha sert vur!", 
+            "Sınırlarımı zorlaman çok hoşuma gidiyor, bu Haki'mi ateşliyor!", "Nefes nefese kaldım... durma!", 
+            "Bu yorgunluk hissi... içimde fırtına yakıyor!"
+        ],
+        "İltifat": [
+            "Bunu duymak... yüzümü kızartıyor, irademin akışını bozuyorsun.", "Beni utandırıyorsun ama devam et, bu korsan kalbimi eritiyor.", 
+            "Gözlerin yalan söylemiyor, bana böyle bakman...", "İltifatların ruhumu okşuyor, kendimi özel hissediyorum.", 
+            "Bana böyle şeyler söyleyince... sana karşı koyamıyorum, ah..."
+        ],
+        "Şaka Yap": [
+            "Ciddi olamazsın... hehe. Bir korsan olarak gülmek güzel.", "Buna güleceğimi sanmazdım ama fena değildi.", 
+            "Sadece seninleyken bu kadar rahat olabiliyorum.", "Beni eğlendirmeyi biliyorsun, bu çok çekici.", 
+            "Yüzümü güldürmen... bana çok iyi geldi, teşekkürler."
+        ]
+    },
+    EXTRA: {
+        "Log Pose Kontrolü": [
+            "Aah! Bu odada... zaman algım yok oluyor, sadece senin dokunuşun var!", "Log Pose'un gücü... ruhumu eritiyor! Daha fazla zevk!", 
+            "Lütfen... biraz daha hızlandır, bu haz inanılmaz!", "Bu haz... dayanılmaz bir seviyede! Aaaaah!", 
+            "Aaaaah! Log Pose içimi titretiyor, aklımı kaybedeceğim!"
+        ],
+        "Haki Fantezisi": [
+            "Ngh! Kaç tanesin?! Hepsine yetişemiyorum! Ah...", "Haki'n... her yerimde! Bu haz inanılmaz!", 
+            "Aynı anda... bu çok fazla! Hücrelerim yanıyor, aah!", "Beni çevrelediniz... her Haki dokunuşu... dayanılmaz bir zevk!", 
+            "AAAAAH! Haki'n... beni deli ediyor, aklımı yitireceğim!"
+        ],
+        "Şeytan Meyvesi Mühürleme": [
+            "Şeytan Meyve'mi mühürledin! Bedenim tamamen çaresiz... senin ellerinde.", "Bu mühür kırıldığında hissettiğim bu haz da ne?!", 
+            "Daha fazla tutamayacağım, içime akıyor her şey!", "Sınırlarım yok oluyor, devam et durma!", 
+            "Bütün enerjim sana karışıyor sanki, çok sıcak!"
+        ],
+        "Yerçekimi Odası": [
+            "Yerçekimi... beni yere yapıştırıyor ama bu çaresizlik hissi... zevkli.", "Hareket edemiyorum... bana istediğini yapabilirsin.", 
+            "Bu ağırlık altında sana itaat etmek bana garip bir haz veriyor.", "Vücudum eziliyor ama içimde bir ateş yanıyor!", 
+            "Ağır... ama nefes nefese kalmak... ah, çok zevkli!"
+        ],
+        "Enerji Aktarımı": [
+            "Ah! İçime akan bu sıcak Haki enerjisi de ne?!", "Daha fazla ver... hücrelerim yanıyor!", 
+            "Senin Haki'nle dolup taşıyorum, aklımı yitireceğim!", "Bu aktarım... aklımı başımdan alacak kadar iyi!", 
+            "Bütün vücudum senin gücünle titriyor, durma!"
+        ],
+        "Tanrısal Ceza": [
+            "Lütfen... bu ceza çok ağır ama bir o kadar zevkli!", "Acı ve haz birbirine karıştı, daha fazla...", 
+            "Beni böyle cezalandırman... neden bu kadar hoşuma gidiyor?", "Daha sert! Bu boyun eğme hissini seviyorum!", 
+            "Ngh! İtaat etmekten başka çarem yok... sahibim."
+        ],
+        "Zihin Kontrolü": [
+            "Düşüncelerim... sadece sen varsın, korsanlık yolum sensin artık.", "Bana ne istersen yaptırabilirsin, tamamen seninim.", 
+            "Zihnim senin ellerinde eriyor... çok rahatlatıcı.", "Kendi iradem yok... bu teslimiyet bana haz veriyor.", 
+            "Sadece senin fısıltılarını hissediyorum... sahibim."
+        ],
+        "Vücut Mühürleme": [
+            "Hareket edemiyorum... dokunuşlarına tamamen açığım, mühürlü korsan.", "Beni bu şekilde hapsetmen... içimi titretiyor.", 
+            "Bedenim kilitli ama hislerim zirvede! Aah!", "Bana istediğini yapabilirsin, sana teslim oldum.", 
+            "Bağlanmak... bu bana inanılmaz bir zevk verdi!"
+        ],
+        "Kapsül Fantezisi": [
+            "Daracık alanda... sadece senin nefesin ve ben.", "Kapsülün içinde sıcaklığın tenimi yakıyor...", 
+            "Buradan çıkmak istemiyorum... bana dokunmaya devam et.", "Sıkışıp kalmak hiç bu kadar zevkli olmamıştı, ah...", 
+            "Bu dar alan... seninle olmak için mükemmel, sahibim."
+        ],
+        "Galaktik Bağ": [
+            "Ruhlarımız ve Haki'lerimiz birleşiyor... aaaaah!", "Tüm korsan dünyasının en büyük hazzı bu olmalı, titriyorum!", 
+            "Boyutları aşan bir zevk! İçimde hissediyorum!", "Seninle bütünleşmek beni deli ediyor, durma!", 
+            "Yıldızlar sönse de bu his bitmesin, lütfen..."
+        ]
+    },
+    GIFT: {
+        "Özel Sake": [
+            "Özel Sake mi?! En sevdiğim! Boğazım kurumuştu zaten...", "İtaatimi göstermek için senin elinden içeceğim, sahibim.", 
+            "Bu Sake bile senin elinden olması... güzel hissettirdi.", "Sıradan bir Sake... ama sen verdiğin için kıymetli.", 
+            "Lıkır lıkır... teşekkürler, canlandırdı."
+        ],
+        "Senzu Fasulyesi": [
+            "Bütün Haki enerjim yerine geldi! Şimdi daha sert devam edebiliriz...", "Bu fasulye... içimi kıpır kıpır yaptı, çok güçlüyüm!", 
+            "Yoguruluğum uçtu gitti! Şimdi sıra bende.", "Ah, hücrelerim yenilendi! Bu harika bir his.", 
+            "Bana bunu layık gördüğün için teşekkürler, canlandım!"
+        ],
+        "Özel Sake": [
+            "O Özel Sake... içimdeki son direnişi de kırdı. Ben tamamen seninim. ", "Sensin... benim korsanlık yolum sensin artık. Beni istediğin gibi mühürle! ", "Bu güç... Korsanlar Kralı'nın gücü gibi! Ve sadece senin için!", "Haz... içimi yakıyor, sana teslim oldum sahibim.", "Aaaaaah! Bu haz... tüm Grand Line'ı titretiyor, aklımı yitireceğim!"
+        ]
+    },
+    DEFAULT_GIFT: [
+        "Bu... bu çok değerli! Gerçekten beni mi düşündün?", "Hediyen kalbimi hızlandırdı, çok teşekkür ederim.", 
+        "Bana bu kadar değer vermen... kendimi özel hissediyor, korsanlık yolumu etkiliyor.", "Vay canına! Bunu hak edecek ne yaptım?", 
+        "Bu hediye... içimde sana karşı olan hisleri büyütüyor, ah..."
+    ]
+};
+
+const SAD_LINES = [
+    "Yine mi aynısı? Kendimi bir korsan aleti gibi hissediyorum.", "Bana gerçekten değer veriyor musun yoksa sadece bir Haki kaynağı mıyım?",
+    "Ruhumun daraldığını hissediyorum, hep aynı rutin, aynı mühürler...", "Beni bir birey olarak görmeyi ne zaman öğreneceksin?",
+    "Senin yanında kendimi çok kullanılmış hissediyorum artık.", "Heyecanımı kaybettim, her şey çok mekanikleşti, ah..."
+];
+
+let cur = null, zeni = 100, love = 0, lust = 0, isLover = false, isDrugged = false;
+let lastAction = "", streak = 0;
+
+function init() {
+    const list = document.getElementById('char-list');
+    CHARS.forEach(c => {
+        list.innerHTML += `<div class="char-card" onclick="select('${c.n}')">
+            <img src="${c.img}" onerror="this.src='https://via.placeholder.com/130x160/222/888?text=${c.n}'">
+            <div style="color:${c.color}; font-size:0.85rem; padding:8px 0; font-weight:bold;">${c.n}</div>
+        </div>`;
+    });
+}
+
+function select(name) {
+    cur = CHARS.find(x => x.n === name);
+    document.getElementById('selector').style.display = 'none';
+    document.getElementById('bg-portrait').src = cur.img; 
+    document.getElementById('bg-portrait').style.opacity = "0.2";
+    addMsg(`${cur.n}: Bir savaşçı/ölümlü için fazla cüretkarsın. Bakalım bana Haki'mi hissettirebilecek misin...`, 'bot');
+    updateUI();
+}
+
+function updateUI() {
+    document.getElementById('money-val').innerText = zeni;
+    document.getElementById('love-val').innerText = Math.floor(love);
+    document.getElementById('lust-val').innerText = Math.floor(lust);
+    document.getElementById('status-val').innerText = isLover ? "SEVGİLİ (MÜHÜRLÜ)" : (isDrugged ? "İTAATKAR KÖLE" : "KORSAN YABANCI");
+    
+    document.getElementById('marry-btn').style.display = (love >= 50 && !isLover && !isDrugged) ? 'block' : 'none';
+    document.getElementById('photo-btn').style.display = isLover ? 'block' : 'none';
+    document.getElementById('extra-btn').style.opacity = (isLover || isDrugged) ? '1' : '0.3';
+}
+
+function addMsg(t, type) {
+    const win = document.getElementById('chat-window');
+    const d = document.createElement('div');
+    d.className = `msg ${type}`;
+    d.innerText = t;
+    win.appendChild(d);
+    win.scrollTop = win.scrollHeight;
+}
+
+function openMenu(type) {
+    const m = document.getElementById('modal');
+    const c = document.getElementById('modal-content');
+    document.getElementById('modal-title').innerText = type.toUpperCase();
+    m.style.display = 'flex';
+    c.innerHTML = "";
+
+    if(type === 'Korsanlık Görevi') {
+        const jobs = [
+            {n:"Yağma", p:50, r:0}, {n:"Barista", p:250, r:0.3}, {n:"Denizci Avı", p:600, r:0.5},
+            {n:"Korsan Dileği", p:2000, r:0.95}, {n:"Düzenli İş", p:120, r:0}, {n:"Hazine", p:40, r:0}
+        ];
+        jobs.forEach(j => c.innerHTML += `<button class="btn" onclick="doWork('${j.n}', ${j.p}, ${j.r})">${j.n} (+${j.p}Beli)</button>`);
+    } else if(type === 'Eylem') {
+        Object.keys(DIALOGUES.ACT).forEach(a => c.innerHTML += `<button class="btn" onclick="handleAct('${a}')">${a}</button>`);
+    } else if(type === 'Hediye') {
+        const gifts = ["Özel Sake", "Senzu Fasulyesi", "Altın Mühür", "Lüks Kimono", "Elmas Kolye", "Hokage Şapkası", "Lüks Araç", "İpek Elbise", "Enerji İçeceği", "Yasaklı Kitap"];
+        gifts.forEach((g, i) => c.innerHTML += `<button class="btn" onclick="buyGift('${g}', ${(i+1)*100})">${g} (${g==="Özel Sake" ? 0 : (i+1)*100}Beli)</button>`);
+    } else if(type === 'Extra') {
+        if(!isLover && !isDrugged) { c.innerHTML = "<p style='color:red; grid-column:span 3;'>ÖNCE KALBİNİ ÇAL (SEVGİLİ OL) VEYA İTAAT MEYVESİ YEDİR!</p>"; return; }
+        Object.keys(DIALOGUES.EXTRA).forEach(e => c.innerHTML += `<button class="btn btn-red" onclick="handleExtra('${e}')">${e}</button>`);
+    }
+}
+
+function doWork(n, p, r) {
+    closeModal();
+    if(Math.random() < r) {
+        addMsg(`* ${n} faaliyetini yaparken galaktik polislere yakalandın! Ceza ödedin.`, 'bot');
+        zeni = Math.max(0, zeni - 300);
+    } else {
+        zeni += p;
+        addMsg(`* [KORSANLIK]: ${n} ile ${p} Beli kazandın.`, 'user');
+    }
+    updateUI();
+}
+
+function handleAct(a) {
+    closeModal();
+    if(a === lastAction) streak++; else { lastAction = a; streak = 0; }
+    
+    if(streak > 2) {
+        addMsg(cur.n + ": " + SAD_LINES[Math.floor(Math.random()*SAD_LINES.length)], 'bot');
+        love = Math.max(0, love - 10);
+    } else {
+        addMsg(`* [Eylem]: ${a} uyguladın.`, 'user');
+        setTimeout(() => {
+            let pool = DIALOGUES.ACT[a];
+            let resp = pool[Math.floor(Math.random() * pool.length)];
+            let prefix = isDrugged ? "Evet Sahibim... " : "";
+            addMsg(cur.n + ": " + prefix + resp, 'bot');
+            love += 5;
+            lust += 2;
+        }, 800);
+    }
+    updateUI();
+}
+
+function buyGift(g, p) {
+    if(g === "Özel Sake") p = 0;
+    if(zeni < p) { alert("Beli yetersiz!"); return; }
+    zeni -= p;
+    closeModal();
+    addMsg(`* [Hediye]: ${g} verdin.`, 'user');
+    
+    setTimeout(() => {
+        let pool = DIALOGUES.GIFT[g] || DIALOGUES.DEFAULT_GIFT;
+        let resp = pool[Math.floor(Math.random() * pool.length)];
+        let prefix = isDrugged ? "Sen istersin de ben almaz mıyım... " : "";
+        addMsg(cur.n + ": " + prefix + resp, 'bot');
+        
+        if(g === "Özel Sake") document.getElementById('hidden-action').style.display = 'block';
+        else love += (p/15);
+        
+        updateUI();
+    }, 800);
+}
+
+function handleExtra(e) {
+    closeModal();
+    addMsg(`* [Fantezi]: ${e} başlatıldı!`, 'user');
+    setTimeout(() => {
+        let pool = DIALOGUES.EXTRA[e];
+        let resp = pool[Math.floor(Math.random() * pool.length)];
+        let prefix = isDrugged ? "Haki'm ve bedenim senin ellerinde... " : "";
+        addMsg(cur.n + ": " + prefix + resp, 'bot');
+        lust += 15;
+        updateUI();
+    }, 1000);
+}
+
+function usePill() {
+    if(zeni < 1000) { alert("Kutsal İtaat Meyvesi için 1000 Beli gerekli!"); return; }
+    zeni -= 1000;
+    isDrugged = true;
+    addMsg("* Ona 'İtaat Meyvesi' yedirdin. Gözlerindeki parlaklık yerini sana olan mutlak itaate bıraktı...", 'user');
+    addMsg(cur.n + ": İradem boşalıyor... Artık ne dersen onu yapacağım. Emret.", 'bot');
+    updateUI();
+}
+
+function marry() {
+    isLover = true; love = 100;
+    addMsg(cur.n + ": Ruhlarımız sonsuza dek mühürlendi. Sadece sana aidim sevgilim...", 'bot');
+    updateUI();
+}
+
+function reqPhoto() {
+    addMsg("* Özel ve sansürsüz bir fotoğraf istedin...", 'user');
+    setTimeout(() => {
+        window.open(`https://www.google.com/search?q=${cur.n}+18`, '_blank');
+        addMsg(cur.n + ": Kimsenin görmediği o pozu senin için hazırladım... Bak bakalım beğenecek misin?", 'bot');
+    }, 1000);
+}
+
+function specialAction() {
+    addMsg("* ⚡ KORSANLAR KRALI'NIN ARZUSU tetiklendi! Tüm Haki bariyerleri yıkıldı.", 'user');
+    lust = 100; love = 100; isDrugged = true;
+    document.getElementById('hidden-action').style.display = 'none';
+    addMsg(cur.n + ": O Özel Sake... içtiğim an anladım... Ben tamamen seninim. Bana mühür tanımadan istediğini yap!", 'bot');
+    updateUI();
+}
+
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+init();
+</script>
+</body>
+</html>
